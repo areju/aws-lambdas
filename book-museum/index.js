@@ -1,18 +1,39 @@
-exports.handler = async(evt) => {
-    console.log("Inside event");
-    
-    const fetch = require("node-fetch");
-    const WEBSERVICE_URL= "https://trcinpm9o1.execute-api.us-east-1.amazonaws.com/Prod/museum";
+const fetch = require("node-fetch");
+const BOOKING_SERVICE = process.env.BOOKING_SERVICE;
 
-    const body = {
-     "buyer_id": "mariano",
-     "museum_name": "tate gallery",
-     "when": "2020-03-14"
-    }
-
-    const response = await fetch(WEBSERVICE_URL,{method: "POST", body: JSON.stringify(body), headers: {'Content-Type':'application/json'}});
-    const result = await response.json();
-
-    console.log(result);
-
+exports.handler = async (evt) => {
+   // fetch the request
+   let response = await fetch(BOOKING_SERVICE, {
+      method: 'POST',
+      body: JSON.stringify(evt)
+   })
+   
+   if(response.status == 200) {
+      let json = await response.json()
+      return json;
+   }
+   
+   if(response.status == 418) {
+      throw new InputInvalidError("InvalidInput: Expected dd-mm-yyyy");
+   }
+   
+   if(response.status == 503) {
+      throw new TransientError("TransientError");
+   }else{
+      throw new Error("Unexpected Error while handling request");
+   }
+   
 }
+
+function InputInvalidError(message) {
+   this.name = "InputInvalidError";
+   this.message = message;
+}
+
+InputInvalidError.prototype = new Error();
+
+function TransientError(message) {
+   this.name = "TransientError";
+   this.message = message;
+}
+TransientError.prototype = new Error();
