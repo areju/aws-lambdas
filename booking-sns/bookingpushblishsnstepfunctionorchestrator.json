@@ -1,0 +1,67 @@
+{
+    "StartAt": "BookHotelState",
+    "States": {
+        "NotifySuccess" : {
+          "Type": "Task",
+          "End": true,
+          "Resource": "arn:aws:states:::sns:publish",
+          "Parameters": {
+            "TopicArn": "arn:aws:sns:us-east-1:XXXXXXX:OrderCompletedTopic",
+            "Message.$": "$"
+          }
+        },
+        "BookHotelState": {
+            "Next": "BookMuseumState",
+            "Parameters": {
+                "buyer_id.$": "$.purchase.buyer_id",
+                "end_date.$": "$.hotel.end_date",
+                "near.$": "$.museum.name",
+                "start_date.$": "$.hotel.start_date"
+            },
+            "Resource": "arn:aws:lambda:us-east-1:XXXXXXX:function:BookHotelClientS1P4",
+            "ResultPath": "$.hotel",
+            "Retry": [
+                {
+                    "ErrorEquals": [
+                        "TransientError"
+                    ],
+                    "MaxAttempts": 3
+                }
+            ],
+            "Type": "Task"
+        },
+        "BookMuseumState": {
+            "Catch": [
+                {
+                    "ErrorEquals": [
+                        "States.ALL"
+                    ],
+                    "Next": "CancelHotelState",
+                    "ResultPath": "$.errorInfo"
+                }
+            ],
+            "Next": "NotifySuccess",
+            "Parameters": {
+                "buyer_id.$": "$.purchase.buyer_id",
+                "museum_name.$": "$.museum.name",
+                "when.$": "$.museum.when"
+            },
+            "Resource": "arn:aws:lambda:us-east-1:XXXXXXXX:function:BookMuseumClientS1P4",
+            "ResultPath": "$.museum",
+            "Retry": [
+                {
+                    "ErrorEquals": [
+                        "TransientError"
+                    ],
+                    "MaxAttempts": 3
+                }
+            ],
+            "Type": "Task"
+        },
+        "CancelHotelState": {
+            "End": true,
+            "Resource": "arn:aws:lambda:us-east-1:XXXXXX:function:CancelHotelClientS1P4",
+            "Type": "Task"
+        }
+    }
+}
